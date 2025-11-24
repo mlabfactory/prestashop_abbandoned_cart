@@ -41,8 +41,13 @@ class Pe_AbandonedCart extends Module
         $this->description = $this->l('Recover abandoned carts by sending reminder emails to customers');
         $this->confirmUninstall = $this->l('Are you sure you want to uninstall this module?');
 
-        if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-            $this->abandonedCartService = new AbandonedCartService();
+        if (file_exists(__DIR__ . '/vendor/autoload.php') && class_exists('MLAB\PE\Service\AbandonedCartService')) {
+            try {
+                $this->abandonedCartService = new AbandonedCartService();
+            } catch (Exception $e) {
+                // Service initialization failed, will skip cart tracking
+                $this->abandonedCartService = null;
+            }
         }
     }
 
@@ -55,7 +60,6 @@ class Pe_AbandonedCart extends Module
     {
         if (!parent::install() ||
             !$this->registerHook('actionCartSave') ||
-            !$this->registerHook('displayHeader') ||
             !$this->installDb() ||
             !$this->installTab()
         ) {

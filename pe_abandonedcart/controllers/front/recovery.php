@@ -20,7 +20,8 @@ class Pe_AbandonedCartRecoveryModuleFrontController extends ModuleFrontControlle
 
         $token = Tools::getValue('token');
 
-        if (!$token) {
+        // Validate token format (64 character hex string)
+        if (!$token || !preg_match('/^[a-f0-9]{64}$/i', $token)) {
             Tools::redirect('index.php?controller=404');
         }
 

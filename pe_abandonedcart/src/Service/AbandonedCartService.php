@@ -41,10 +41,17 @@ class AbandonedCartService
             $abandonedCart->id_cart = $cart->id;
             $abandonedCart->id_customer = $cart->id_customer;
             $abandonedCart->email = $customer->email;
-            $abandonedCart->cart_data = json_encode([
+            
+            $cartData = json_encode([
                 'products' => $cart->getProducts(),
                 'total' => $cart->getOrderTotal()
             ]);
+            
+            if ($cartData === false) {
+                return false;
+            }
+            
+            $abandonedCart->cart_data = $cartData;
             $abandonedCart->generateRecoveryToken();
             $abandonedCart->date_add = date('Y-m-d H:i:s');
             $abandonedCart->date_upd = date('Y-m-d H:i:s');
@@ -53,10 +60,17 @@ class AbandonedCartService
         } else {
             // Update existing record
             $abandonedCart->date_upd = date('Y-m-d H:i:s');
-            $abandonedCart->cart_data = json_encode([
+            
+            $cartData = json_encode([
                 'products' => $cart->getProducts(),
                 'total' => $cart->getOrderTotal()
             ]);
+            
+            if ($cartData === false) {
+                return false;
+            }
+            
+            $abandonedCart->cart_data = $cartData;
             
             return $abandonedCart->update();
         }
@@ -119,6 +133,14 @@ class AbandonedCartService
         // Get cart products
         $products = $cart->getProducts();
         $cartData = json_decode($abandonedCart->cart_data, true);
+        
+        if ($cartData === null || !isset($cartData['total'])) {
+            // Fallback to current cart data if decode fails
+            $cartData = [
+                'products' => $products,
+                'total' => $cart->getOrderTotal()
+            ];
+        }
 
         // Prepare template variables
         $templateVars = [
