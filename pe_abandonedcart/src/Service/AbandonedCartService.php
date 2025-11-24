@@ -134,7 +134,7 @@ class AbandonedCartService
         $products = $cart->getProducts();
         $cartData = json_decode($abandonedCart->cart_data, true);
         
-        if ($cartData === null || !isset($cartData['total'])) {
+        if (json_last_error() !== JSON_ERROR_NONE || $cartData === null || !isset($cartData['total'])) {
             // Fallback to current cart data if decode fails
             $cartData = [
                 'products' => $products,

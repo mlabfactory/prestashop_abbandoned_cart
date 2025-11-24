@@ -86,6 +86,10 @@ class AdminPeAbandonedCartController extends ModuleAdminController
         $cart = new Cart($abandonedCart->id_cart);
         $customer = new Customer($abandonedCart->id_customer);
         $cartData = json_decode($abandonedCart->cart_data, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE || $cartData === null) {
+            $cartData = ['products' => [], 'total' => 0];
+        }
 
         $this->context->smarty->assign([
             'abandonedCart' => $abandonedCart,
