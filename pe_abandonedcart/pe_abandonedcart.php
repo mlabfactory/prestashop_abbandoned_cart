@@ -56,7 +56,8 @@ class Pe_AbandonedCart extends Module
         if (!parent::install() ||
             !$this->registerHook('actionCartSave') ||
             !$this->registerHook('displayHeader') ||
-            !$this->installDb()
+            !$this->installDb() ||
+            !$this->installTab()
         ) {
             return false;
         }
@@ -75,7 +76,8 @@ class Pe_AbandonedCart extends Module
     public function uninstall()
     {
         if (!parent::uninstall() ||
-            !$this->uninstallDb()
+            !$this->uninstallDb() ||
+            !$this->uninstallTab()
         ) {
             return false;
         }
@@ -131,6 +133,45 @@ class Pe_AbandonedCart extends Module
         Configuration::updateValue('PE_ABANDONED_CART_CRON_TOKEN', md5(uniqid(rand(), true)));
         Configuration::updateValue('PE_ABANDONED_CART_DELAY', 60); // 60 minutes default
         Configuration::updateValue('PE_ABANDONED_CART_ENABLED', 1);
+    }
+
+    /**
+     * Install admin tab
+     *
+     * @return bool
+     */
+    private function installTab()
+    {
+        $tab = new Tab();
+        $tab->active = 1;
+        $tab->class_name = 'AdminPeAbandonedCart';
+        $tab->name = [];
+        
+        foreach (Language::getLanguages(true) as $lang) {
+            $tab->name[$lang['id_lang']] = 'Abandoned Carts';
+        }
+        
+        $tab->id_parent = (int)Tab::getIdFromClassName('AdminOrders');
+        $tab->module = $this->name;
+        
+        return $tab->add();
+    }
+
+    /**
+     * Uninstall admin tab
+     *
+     * @return bool
+     */
+    private function uninstallTab()
+    {
+        $id_tab = (int)Tab::getIdFromClassName('AdminPeAbandonedCart');
+        
+        if ($id_tab) {
+            $tab = new Tab($id_tab);
+            return $tab->delete();
+        }
+        
+        return true;
     }
 
     /**
