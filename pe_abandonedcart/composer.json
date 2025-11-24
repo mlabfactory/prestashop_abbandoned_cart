@@ -1,0 +1,25 @@
+{
+    "name": "mlab/pe-abandonedcart",
+    "description": "PrestaShop module to recover abandoned carts by sending reminder emails",
+    "type": "prestashop-module",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "MLAB Factory",
+            "email": "info@mlabfactory.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "prestashop/prestashop": ">=1.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "MLAB\\PE\\": "src/"
+        }
+    },
+    "config": {
+        "preferred-install": "dist",
+        "optimize-autoloader": true
+    }
+}

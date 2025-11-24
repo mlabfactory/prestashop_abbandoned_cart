@@ -1,0 +1,22 @@
+# Composer
+vendor/
+composer.lock
+
+# Module specific
+pe_abandonedcart/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.log
