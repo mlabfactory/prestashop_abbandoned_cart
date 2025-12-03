@@ -13,68 +13,6 @@ use MLAB\PE\Model\AbandonedCart;
 
 class AbandonedCartService
 {
-    /**
-     * Track a cart for abandonment
-     *
-     * @param \Cart $cart
-     * @return bool
-     */
-    public function trackCart($cart)
-    {
-        // Don't track if cart is empty
-        if (!$cart || !$cart->id || !$cart->nbProducts()) {
-            return false;
-        }
-
-        // Don't track if customer is not logged in or has no email
-        $customer = new \Customer($cart->id_customer);
-        if (!$customer->id || !$customer->email) {
-            return false;
-        }
-
-        // Check if cart is already tracked
-        $abandonedCart = AbandonedCart::getByCartId($cart->id);
-
-        if (!$abandonedCart) {
-            // Create new abandoned cart record
-            $abandonedCart = new AbandonedCart();
-            $abandonedCart->id_cart = $cart->id;
-            $abandonedCart->id_customer = $cart->id_customer;
-            $abandonedCart->email = $customer->email;
-            
-            $cartData = json_encode([
-                'products' => $cart->getProducts(),
-                'total' => $cart->getOrderTotal()
-            ]);
-            
-            if ($cartData === false) {
-                return false;
-            }
-            
-            $abandonedCart->cart_data = $cartData;
-            $abandonedCart->generateRecoveryToken();
-            $abandonedCart->date_add = date('Y-m-d H:i:s');
-            $abandonedCart->date_upd = date('Y-m-d H:i:s');
-            
-            return $abandonedCart->add();
-        } else {
-            // Update existing record
-            $abandonedCart->date_upd = date('Y-m-d H:i:s');
-            
-            $cartData = json_encode([
-                'products' => $cart->getProducts(),
-                'total' => $cart->getOrderTotal()
-            ]);
-            
-            if ($cartData === false) {
-                return false;
-            }
-            
-            $abandonedCart->cart_data = $cartData;
-            
-            return $abandonedCart->update();
-        }
-    }
 
     /**
      * Process abandoned carts and send emails
@@ -83,43 +21,181 @@ class AbandonedCartService
      */
     public function processAbandonedCarts()
     {
+        \PrestaShopLogger::addLog(
+            'Starting abandoned cart processing',
+            1,
+            null,
+            'Pe_AbandonedCart',
+            null,
+            true
+        );
+
         if (!\Configuration::get('PE_ABANDONED_CART_ENABLED')) {
+            \PrestaShopLogger::addLog(
+                'Abandoned cart module is disabled',
+                1,
+                null,
+                'Pe_AbandonedCart',
+                null,
+                true
+            );
             return 0;
         }
 
         $delay = (int)\Configuration::get('PE_ABANDONED_CART_DELAY');
-        $abandonedCarts = AbandonedCart::getAbandonedCartsToNotify($delay);
+        \PrestaShopLogger::addLog(
+            'Processing with delay: ' . $delay . ' minutes',
+            1,
+            null,
+            'Pe_AbandonedCart',
+            null,
+            true
+        );
+
+        $abandonedCarts = $this->getAbandonedCartsToNotify($delay);
+        \PrestaShopLogger::addLog(
+            'Found ' . count($abandonedCarts) . ' abandoned carts to process',
+            1,
+            null,
+            'Pe_AbandonedCart',
+            null,
+            true
+        );
+
         $emailsSent = 0;
 
         foreach ($abandonedCarts as $cartData) {
-            $abandonedCart = new AbandonedCart($cartData['id_abandoned_cart']);
+            \PrestaShopLogger::addLog(
+                'Processing cart ID: ' . $cartData['id_cart'] . ' for customer: ' . $cartData['email'],
+                1,
+                null,
+                'Pe_AbandonedCart',
+                null,
+                true
+            );
+
+            $cart = new \Cart($cartData['id_cart']);
+            $customer = new \Customer($cartData['id_customer']);
             
-            if ($this->sendRecoveryEmail($abandonedCart)) {
-                $abandonedCart->markEmailAsSent();
+            if ($this->sendRecoveryEmailForCart($cart, $customer)) {
+                // Registra l'invio dell'email nella tabella abandoned_cart
+                $this->recordEmailSent($cart, $customer);
                 $emailsSent++;
             }
         }
+
+        \PrestaShopLogger::addLog(
+            'Abandoned cart processing completed. Emails sent: ' . $emailsSent,
+            1,
+            null,
+            'Pe_AbandonedCart',
+            null,
+            true
+        );
 
         return $emailsSent;
     }
 
     /**
-     * Send recovery email
+     * Get abandoned carts that need email notification
      *
-     * @param AbandonedCart $abandonedCart
+     * @param int $delay Delay in minutes
+     * @return array
+     */
+    private function getAbandonedCartsToNotify($delay = 60)
+    {
+        $sql = 'SELECT cart.id_cart, customer.*
+                FROM `' . _DB_PREFIX_ . 'cart` as cart
+                LEFT JOIN `' . _DB_PREFIX_ . 'customer` as customer ON customer.id_customer = cart.id_customer
+                LEFT JOIN `' . _DB_PREFIX_ . 'abandoned_cart` as ac ON ac.id_cart = cart.id_cart
+                WHERE TIMESTAMPDIFF(MINUTE, cart.date_upd, NOW()) >= ' . (int)$delay . '
+                AND cart.id_customer != 0
+                AND cart.checkout_session_data IS NULL
+                AND (ac.email_sent = 0 OR ac.email_sent IS NULL)
+                AND (ac.recovered = 0 OR ac.recovered IS NULL)
+                ORDER BY cart.date_add ASC';
+
+        \PrestaShopLogger::addLog(
+            'Executing query: ' . $sql,
+            1,
+            null,
+            'Pe_AbandonedCart',
+            null,
+            true
+        );
+
+        $result = \Db::getInstance()->executeS($sql);
+        
+        if ($result === false) {
+            \PrestaShopLogger::addLog(
+                'Database error in getAbandonedCartsToNotify: ' . \Db::getInstance()->getMsgError(),
+                3,
+                null,
+                'Pe_AbandonedCart',
+                null,
+                true
+            );
+            return [];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Record that email was sent for this cart
+     *
+     * @param \Cart $cart
+     * @param \Customer $customer
      * @return bool
      */
-    private function sendRecoveryEmail($abandonedCart)
+    private function recordEmailSent($cart, $customer)
     {
-        $customer = new \Customer($abandonedCart->id_customer);
-        $cart = new \Cart($abandonedCart->id_cart);
+        // Check if record already exists
+        $abandonedCart = AbandonedCart::getByCartId($cart->id);
+        
+        if (!$abandonedCart) {
+            // Create new record
+            $abandonedCart = new AbandonedCart();
+            $abandonedCart->id_cart = $cart->id;
+            $abandonedCart->id_customer = $cart->id_customer;
+            $abandonedCart->email = $customer->email;
+            $abandonedCart->generateRecoveryToken();
+            $abandonedCart->date_add = date('Y-m-d H:i:s');
+            $abandonedCart->date_upd = date('Y-m-d H:i:s');
+            $result = $abandonedCart->add();
+        } else {
+            $result = true;
+        }
+        
+        if ($result) {
+            $abandonedCart->markEmailAsSent();
+        }
+        
+        return $result;
+    }
 
-        if (!$customer->id || !$cart->id) {
+    /**
+     * Send recovery email for a cart
+     *
+     * @param \Cart $cart
+     * @param \Customer $customer
+     * @return bool
+     */
+    private function sendRecoveryEmailForCart($cart, $customer)
+    {
+        if (!$customer->id || !$cart->id || !$cart->nbProducts()) {
             return false;
         }
 
         $context = \Context::getContext();
         $language = new \Language($customer->id_lang);
+
+        // Get or create recovery token
+        $abandonedCart = AbandonedCart::getByCartId($cart->id);
+        if (!$abandonedCart) {
+            $abandonedCart = new AbandonedCart();
+            $abandonedCart->generateRecoveryToken();
+        }
 
         // Generate recovery URL
         $recoveryUrl = $context->link->getModuleLink(
@@ -132,15 +208,6 @@ class AbandonedCartService
 
         // Get cart products
         $products = $cart->getProducts();
-        $cartData = json_decode($abandonedCart->cart_data, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE || $cartData === null || !isset($cartData['total'])) {
-            // Fallback to current cart data if decode fails
-            $cartData = [
-                'products' => $products,
-                'total' => $cart->getOrderTotal()
-            ];
-        }
 
         // Prepare template variables
         $templateVars = [
@@ -150,7 +217,7 @@ class AbandonedCartService
             '{recovery_url}' => $recoveryUrl,
             '{shop_name}' => \Configuration::get('PS_SHOP_NAME'),
             '{shop_url}' => $context->link->getPageLink('index', true),
-            '{cart_total}' => \Tools::displayPrice($cartData['total']),
+            '{cart_total}' => $this->formatPrice($cart->getOrderTotal(), $cart->id_currency),
             '{products_list}' => $this->generateProductsList($products),
         ];
 
@@ -158,10 +225,10 @@ class AbandonedCartService
         $templatePath = _PS_MODULE_DIR_ . 'pe_abandonedcart/views/templates/email/';
 
         // Send email
-        return \Mail::Send(
+        $mailResult = \Mail::Send(
             $language->id,
             'abandoned_cart',
-            'Recover your cart - ' . \Configuration::get('PS_SHOP_NAME'),
+            'Abbiamo salvato il tuo carrello! - ' . \Configuration::get('PS_SHOP_NAME'),
             $templateVars,
             $customer->email,
             $customer->firstname . ' ' . $customer->lastname,
@@ -173,6 +240,8 @@ class AbandonedCartService
             false,
             $context->shop->id
         );
+
+        return $mailResult;
     }
 
     /**
@@ -183,7 +252,7 @@ class AbandonedCartService
      */
     private function generateProductsList($products)
     {
-        $html = '<table style="width: 100%; border-collapse: collapse;">';
+        $html = '<ul class="product-list">';
         
         foreach ($products as $product) {
             $imageUrl = '';
@@ -196,23 +265,49 @@ class AbandonedCartService
                 );
             }
 
-            $html .= '<tr style="border-bottom: 1px solid #ddd;">';
-            $html .= '<td style="padding: 10px;">';
+            $html .= '<li class="product-item">';
+            
             if ($imageUrl) {
-                $html .= '<img src="' . $imageUrl . '" alt="' . htmlspecialchars($product['name']) . '" style="width: 80px; height: auto;">';
+                $html .= '<img src="' . $imageUrl . '" alt="' . htmlspecialchars($product['name']) . '" class="product-image">';
+            } else {
+                $html .= '<div class="product-image" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center;">📦</div>';
             }
-            $html .= '</td>';
-            $html .= '<td style="padding: 10px;">';
-            $html .= '<strong>' . htmlspecialchars($product['name']) . '</strong><br>';
-            $html .= 'Qty: ' . (int)$product['quantity'] . '<br>';
-            $html .= 'Price: ' . \Tools::displayPrice($product['price_wt']);
-            $html .= '</td>';
-            $html .= '</tr>';
+            
+            $html .= '<div class="product-details">';
+            $html .= '<div class="product-name">' . htmlspecialchars($product['name']) . '</div>';
+            
+            // Add product attributes if available
+            if (isset($product['attributes_small']) && !empty($product['attributes_small'])) {
+                $html .= '<div class="product-specs">' . htmlspecialchars($product['attributes_small']) . '</div>';
+            }
+            
+            $html .= '<div class="product-specs">Quantità: ' . (int)$product['quantity'] . '</div>';
+            $html .= '</div>';
+            
+            $html .= '<div class="product-price">' . $this->formatPrice($product['price_wt'], $product['id_currency'] ?? \Context::getContext()->currency->id) . '</div>';
+            $html .= '</li>';
         }
         
-        $html .= '</table>';
+        $html .= '</ul>';
         
         return $html;
+    }
+
+    /**
+     * Format price with currency
+     *
+     * @param float $price
+     * @param int $idCurrency
+     * @return string
+     */
+    private function formatPrice($price, $idCurrency)
+    {
+        try {
+            $currency = new \Currency($idCurrency);
+            return number_format($price, 2, ',', '.') . ' ' . $currency->sign;
+        } catch (Exception $e) {
+            return '€' . number_format($price, 2, ',', '.');
+        }
     }
 
     /**

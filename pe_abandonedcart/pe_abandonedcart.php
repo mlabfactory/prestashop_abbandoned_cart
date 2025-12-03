@@ -13,21 +13,14 @@ if (!defined('_PS_VERSION_')) {
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use MLAB\PE\Service\AbandonedCartService;
-
 class Pe_AbandonedCart extends Module
 {
-    /**
-     * @var AbandonedCartService
-     */
-    private $abandonedCartService;
-
     public function __construct()
     {
         $this->name = 'pe_abandonedcart';
         $this->tab = 'emailing';
         $this->version = '1.0.0';
-        $this->author = 'MLAB Factory';
+        $this->author = 'MlabFactory';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
             'min' => '1.7.0.0',
@@ -40,15 +33,6 @@ class Pe_AbandonedCart extends Module
         $this->displayName = $this->l('Abandoned Cart Recovery');
         $this->description = $this->l('Recover abandoned carts by sending reminder emails to customers');
         $this->confirmUninstall = $this->l('Are you sure you want to uninstall this module?');
-
-        if (file_exists(__DIR__ . '/vendor/autoload.php') && class_exists('MLAB\PE\Service\AbandonedCartService')) {
-            try {
-                $this->abandonedCartService = new AbandonedCartService();
-            } catch (Exception $e) {
-                // Service initialization failed, will skip cart tracking
-                $this->abandonedCartService = null;
-            }
-        }
     }
 
     /**
@@ -186,12 +170,9 @@ class Pe_AbandonedCart extends Module
      */
     public function hookActionCartSave($params)
     {
-        if (!isset($params['cart']) || !$this->abandonedCartService) {
-            return;
-        }
-
-        $cart = $params['cart'];
-        $this->abandonedCartService->trackCart($cart);
+        // Cart tracking is no longer needed as we query carts directly
+        // The abandoned cart service now works by querying the cart table
+        return;
     }
 
     /**

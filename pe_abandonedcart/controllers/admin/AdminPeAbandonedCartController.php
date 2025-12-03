@@ -21,50 +21,50 @@ class AdminPeAbandonedCartController extends ModuleAdminController
 
         $this->fields_list = [
             'id_abandoned_cart' => [
-                'title' => $this->l('ID'),
+                'title' => $this->module->l('ID', 'AdminPeAbandonedCartController'),
                 'align' => 'center',
                 'class' => 'fixed-width-xs'
             ],
             'id_cart' => [
-                'title' => $this->l('Cart ID'),
+                'title' => $this->module->l('Cart ID', 'AdminPeAbandonedCartController'),
                 'align' => 'center',
                 'class' => 'fixed-width-xs'
             ],
             'email' => [
-                'title' => $this->l('Customer Email'),
+                'title' => $this->module->l('Customer Email', 'AdminPeAbandonedCartController'),
                 'align' => 'left'
             ],
             'date_add' => [
-                'title' => $this->l('Date Added'),
+                'title' => $this->module->l('Date Added', 'AdminPeAbandonedCartController'),
                 'type' => 'datetime',
                 'align' => 'center'
             ],
             'date_upd' => [
-                'title' => $this->l('Last Update'),
+                'title' => $this->module->l('Last Update', 'AdminPeAbandonedCartController'),
                 'type' => 'datetime',
                 'align' => 'center'
             ],
             'email_sent' => [
-                'title' => $this->l('Email Sent'),
+                'title' => $this->module->l('Email Sent', 'AdminPeAbandonedCartController'),
                 'align' => 'center',
                 'active' => 'email_sent',
                 'type' => 'bool',
                 'class' => 'fixed-width-sm'
             ],
             'date_email_sent' => [
-                'title' => $this->l('Email Sent Date'),
+                'title' => $this->module->l('Email Sent Date', 'AdminPeAbandonedCartController'),
                 'type' => 'datetime',
                 'align' => 'center'
             ],
             'recovered' => [
-                'title' => $this->l('Recovered'),
+                'title' => $this->module->l('Recovered', 'AdminPeAbandonedCartController'),
                 'align' => 'center',
                 'active' => 'recovered',
                 'type' => 'bool',
                 'class' => 'fixed-width-sm'
             ],
             'date_recovered' => [
-                'title' => $this->l('Recovery Date'),
+                'title' => $this->module->l('Recovery Date', 'AdminPeAbandonedCartController'),
                 'type' => 'datetime',
                 'align' => 'center'
             ]
@@ -79,7 +79,7 @@ class AdminPeAbandonedCartController extends ModuleAdminController
         $abandonedCart = new MLAB\PE\Model\AbandonedCart((int)Tools::getValue('id_abandoned_cart'));
         
         if (!Validate::isLoadedObject($abandonedCart)) {
-            $this->errors[] = $this->l('An error occurred while loading the object.');
+            $this->errors[] = $this->module->l('An error occurred while loading the object.', 'AdminPeAbandonedCartController');
             return false;
         }
 
@@ -121,7 +121,7 @@ class AdminPeAbandonedCartController extends ModuleAdminController
         if ($this->display != 'view' && $this->display != 'add' && $this->display != 'edit') {
             $this->page_header_toolbar_btn['module_config'] = [
                 'href' => $this->context->link->getAdminLink('AdminModules', true) . '&configure=pe_abandonedcart',
-                'desc' => $this->l('Configure Module'),
+                'desc' => $this->module->l('Configure Module', 'AdminPeAbandonedCartController'),
                 'icon' => 'process-icon-configure'
             ];
         }

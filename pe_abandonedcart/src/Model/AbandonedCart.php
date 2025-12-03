@@ -93,26 +93,6 @@ class AbandonedCart extends \ObjectModel
     ];
 
     /**
-     * Get abandoned carts that need email notification
-     *
-     * @param int $delay Delay in minutes
-     * @return array
-     */
-    public static function getAbandonedCartsToNotify($delay = 60)
-    {
-        $sql = 'SELECT ac.*
-                FROM `' . _DB_PREFIX_ . 'abandoned_cart` ac
-                INNER JOIN `' . _DB_PREFIX_ . 'cart` c ON (ac.id_cart = c.id_cart)
-                WHERE ac.email_sent = 0
-                AND ac.recovered = 0
-                AND TIMESTAMPDIFF(MINUTE, ac.date_upd, NOW()) >= ' . (int)$delay . '
-                AND c.id_cart IS NOT NULL
-                ORDER BY ac.date_add ASC';
-
-        return \Db::getInstance()->executeS($sql);
-    }
-
-    /**
      * Get abandoned cart by recovery token
      *
      * @param string $token

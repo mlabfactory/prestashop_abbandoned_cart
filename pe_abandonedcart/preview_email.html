@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your cart is waiting for you</title>
+    <title>Abbiamo salvato il tuo carrello!</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -93,64 +93,106 @@
             color: #4CAF50;
             text-decoration: none;
         }
-        table.products-list {
-            width: 100%;
-            border-collapse: collapse;
+        .product-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
         }
-        table.products-list td {
-            padding: 10px;
-            vertical-align: middle;
+        .product-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
         }
-        table.products-list tr {
-            border-bottom: 1px solid #ddd;
-        }
-        table.products-list img {
+        .product-image {
             width: 80px;
-            height: auto;
+            height: 80px;
+            border-radius: 8px;
+            margin-right: 15px;
+            object-fit: cover;
+            border: 1px solid #4CAF50;
+        }
+        .product-details {
+            flex: 1;
+        }
+        .product-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .product-specs {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .product-price {
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: right;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛒 Your Cart is Waiting!</h1>
+            <h1>🛒 Abbiamo salvato il tuo carrello!</h1>
         </div>
         
         <div class="content">
             <div class="greeting">
-                <p>Hello {firstname} {lastname},</p>
+                <p>Ciao Maria Rossi,</p>
             </div>
             
             <div class="message">
-                <p>We noticed you left some items in your cart at <strong>{shop_name}</strong>.</p>
-                <p>Don't worry, we've saved them for you! Complete your purchase now before they're gone.</p>
+                <p>Non ti sei dimenticato del tuo carrello su <strong>Dolce & Zampa</strong>, vero?</p>
+                <p>Cogli l'occasione per ordinare prima che i prodotti finiscano!</p>
             </div>
             
             <div class="products-section">
-                <h2>Your Cart Items:</h2>
-                {products_list}
+                <h2>I tuoi prodotti:</h2>
+                <ul class="product-list">
+                    <li class="product-item">
+                        <img src="https://via.placeholder.com/80x80/D4B896/FFFFFF?text=🐕" alt="Set pettorina + guinzaglio" class="product-image">
+                        <div class="product-details">
+                            <div class="product-name">Set pettorina + guinzaglio in pelle con porta sacchetti</div>
+                            <div class="product-specs">Taglia: S - Colore: blu metallico</div>
+                        </div>
+                        <div class="product-price">€72,00</div>
+                    </li>
+                    <li class="product-item">
+                        <img src="https://via.placeholder.com/80x80/B8A082/FFFFFF?text=🐕" alt="Set pettorina + guinzaglio" class="product-image">
+                        <div class="product-details">
+                            <div class="product-name">Set pettorina + guinzaglio in pelle con porta sacchetti</div>
+                            <div class="product-specs">Taglia: S - Colore: Giallo</div>
+                        </div>
+                        <div class="product-price">€72,00</div>
+                    </li>
+                </ul>
                 
                 <div class="cart-total">
-                    Total: {cart_total}
+                    Totale: €144,00
                 </div>
             </div>
             
             <div class="cta-button">
-                <a href="{recovery_url}">Complete Your Purchase</a>
+                <a href="https://dolcezampa.com/cart?token=abc123xyz789">Vai alla cassa</a>
             </div>
             
             <div class="message">
-                <p>Click the button above to return to your cart and complete your order.</p>
-                <p>If you have any questions, please don't hesitate to contact us.</p>
+                <p>Clicca sul pulsante qui sopra per tornare al tuo carrello e completare l'ordine.</p>
+                <p>Se hai domande, non esitare a contattarci.</p>
             </div>
         </div>
         
         <div class="footer">
-            <p>Thank you for shopping with us!</p>
-            <p><a href="{shop_url}">{shop_name}</a></p>
+            <p>Grazie per aver scelto di fare acquisti con noi!</p>
+            <p><a href="https://dolcezampa.com">Dolce & Zampa</a></p>
             <p style="font-size: 12px; color: #999; margin-top: 10px;">
-                This email was sent because you have items in your shopping cart. 
-                If you did not request this email, you can safely ignore it.
+                Questa email è stata inviata perché hai articoli nel tuo carrello. 
+                Se non hai richiesto questa email, puoi ignorarla tranquillamente.
             </p>
         </div>
     </div>

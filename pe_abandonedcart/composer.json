@@ -10,8 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=7.2",
-        "prestashop/prestashop": ">=1.7"
+        "php": ">=8.2"
     },
     "autoload": {
         "psr-4": {

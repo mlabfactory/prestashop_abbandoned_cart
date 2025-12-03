@@ -7,42 +7,55 @@
  * @license   MIT License
  */
 
-use MLAB\PE\Service\AbandonedCartService;
+if (!defined('_PS_VERSION_')) {
+    exit;
+}
 
 class Pe_AbandonedCartCronModuleFrontController extends ModuleFrontController
 {
-    /**
-     * Initialize controller
-     */
-    public function init()
+    public function initContent()
     {
-        parent::init();
-        
-        // Check token for security
+        // Security check
         $token = Tools::getValue('token');
         $configToken = Configuration::get('PE_ABANDONED_CART_CRON_TOKEN');
 
         if (!$token || $token !== $configToken) {
             header('HTTP/1.1 403 Forbidden');
-            die('Invalid token');
+            header('Content-Type: application/json');
+            die(json_encode(['error' => 'Invalid token']));
         }
-    }
 
-    /**
-     * Process cron job
-     */
-    public function initContent()
-    {
-        parent::initContent();
+        try {
+            // Load autoloader
+            $autoloadPath = dirname(__FILE__) . '/../../vendor/autoload.php';
+            if (file_exists($autoloadPath)) {
+                require_once $autoloadPath;
+            }
 
-        $service = new AbandonedCartService();
-        $emailsSent = $service->processAbandonedCarts();
+            // Check if class exists
+            if (!class_exists('MLAB\PE\Service\AbandonedCartService')) {
+                throw new Exception('AbandonedCartService class not found');
+            }
 
-        header('Content-Type: application/json');
-        die(json_encode([
-            'success' => true,
-            'emails_sent' => $emailsSent,
-            'timestamp' => date('Y-m-d H:i:s')
-        ]));
+            // Process abandoned carts
+            $service = new MLAB\PE\Service\AbandonedCartService();
+            $emailsSent = $service->processAbandonedCarts();
+
+            header('Content-Type: application/json');
+            die(json_encode([
+                'success' => true,
+                'emails_sent' => $emailsSent,
+                'timestamp' => date('Y-m-d H:i:s')
+            ]));
+
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            header('HTTP/1.1 500 Internal Server Error');
+            die(json_encode([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'timestamp' => date('Y-m-d H:i:s')
+            ]));
+        }
     }
 }

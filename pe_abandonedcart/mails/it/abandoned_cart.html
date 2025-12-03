@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abbiamo salvato il tuo carrello!</title>
+        <style>
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background-color: #F5F1E8; 
+            margin: 0; 
+            padding: 20px; 
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #D4B896, #B8A082); 
+            padding: 30px; 
+            text-align: center; 
+        }
+        .header h1 {
+            color: white; 
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .header p {
+            color: white; 
+            margin: 10px 0 0 0;
+            font-size: 16px;
+        }
+        .content { 
+            padding: 30px; 
+        }
+        .content h2 {
+            color: #5D4E37;
+            margin-top: 0;
+        }
+        .info-box { 
+            background: #E8DCC0; 
+            border: 3px dashed #B8A082; 
+            border-radius: 15px; 
+            padding: 25px; 
+            margin: 25px 0; 
+        }
+        .info-box h3 {
+            margin: 0 0 15px 0; 
+            color: #8B6914;
+            font-size: 18px;
+        }
+        .info-box .label {
+            font-weight: bold;
+            color: #5D4E37;
+        }
+        .info-box .value {
+            color: #B8A082;
+            font-weight: 600;
+        }
+        .alert-box {
+            background: #FFF3CD;
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .alert-box h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        .success-box {
+            background: #D4EDDA;
+            border: 2px solid #28A745;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .success-box h3 {
+            margin: 0 0 10px 0;
+            color: #155724;
+        }
+        .tips-box {
+            background: #F9F6F0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .tips-box h3 {
+            margin-top: 0;
+            color: #8B6914;
+        }
+        .tips-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .tips-box li {
+            margin: 8px 0;
+            color: #5D4E37;
+        }
+        .product-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+        .product-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #E8DCC0;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            background: #FEFCF7;
+        }
+        .product-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            margin-right: 15px;
+            object-fit: cover;
+            border: 1px solid #D4B896;
+        }
+        .product-details {
+            flex: 1;
+        }
+        .product-name {
+            font-weight: bold;
+            color: #5D4E37;
+            margin-bottom: 5px;
+        }
+        .product-specs {
+            font-size: 14px;
+            color: #8B6914;
+            margin-bottom: 5px;
+        }
+        .product-price {
+            font-weight: bold;
+            color: #B8A082;
+            text-align: right;
+        }
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .order-table th {
+            background: #D4B896;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .order-table td {
+            border: 1px solid #E8DCC0;
+            padding: 10px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #D4B896, #B8A082);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .cta-button a {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .footer { 
+            background: #F5F1E8; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 12px; 
+            color: #666; 
+        }
+        .footer a {
+            color: #8B6914;
+            text-decoration: none;
+        }
+        @media only screen and (max-width: 600px) {
+            .container {
+                border-radius: 0;
+            }
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 Abbiamo salvato il tuo carrello!</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                <p>Ciao {firstname} {lastname},</p>
+            </div>
+            
+            <div class="message">
+                <p>Non ti sei dimenticato del tuo carrello su <strong>{shop_name}</strong>, vero?</p>
+                <p>Cogli l'occasione per ordinare prima che i prodotti finiscano!</p>
+            </div>
+            
+            <div class="products-section">
+                <h2>I tuoi prodotti:</h2>
+                {products_list}
+                
+                <div class="cart-total">
+                    Totale: {cart_total}
+                </div>
+            </div>
+            
+            <div class="cta-button">
+                <a href="{recovery_url}">Vai alla cassa</a>
+            </div>
+            
+            <div class="message">
+                <p>Clicca sul pulsante qui sopra per tornare al tuo carrello e completare l'ordine.</p>
+                <p>Se hai domande, non esitare a contattarci.</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Grazie per aver scelto di fare acquisti con noi!</p>
+            <p><a href="{shop_url}">{shop_name}</a></p>
+            <p style="font-size: 12px; color: #999; margin-top: 10px;">
+                Questa email è stata inviata perché hai articoli nel tuo carrello. 
+                Se non hai richiesto questa email, puoi ignorarla tranquillamente.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
