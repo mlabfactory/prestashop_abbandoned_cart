@@ -10,6 +10,7 @@
 namespace MLAB\PE\Service;
 
 use MLAB\PE\Model\AbandonedCart;
+use MLAB\PE\Model\CheckoutData;
 
 class AbandonedCartService
 {
@@ -21,61 +22,30 @@ class AbandonedCartService
      */
     public function processAbandonedCarts()
     {
-        \PrestaShopLogger::addLog(
-            'Starting abandoned cart processing',
-            1,
-            null,
-            'Pe_AbandonedCart',
-            null,
-            true
-        );
+        
 
         if (!\Configuration::get('PE_ABANDONED_CART_ENABLED')) {
-            \PrestaShopLogger::addLog(
-                'Abandoned cart module is disabled',
-                1,
-                null,
-                'Pe_AbandonedCart',
-                null,
-                true
-            );
             return 0;
         }
 
         $delay = (int)\Configuration::get('PE_ABANDONED_CART_DELAY');
-        \PrestaShopLogger::addLog(
-            'Processing with delay: ' . $delay . ' minutes',
-            1,
-            null,
-            'Pe_AbandonedCart',
-            null,
-            true
-        );
 
         $abandonedCarts = $this->getAbandonedCartsToNotify($delay);
-        \PrestaShopLogger::addLog(
-            'Found ' . count($abandonedCarts) . ' abandoned carts to process',
-            1,
-            null,
-            'Pe_AbandonedCart',
-            null,
-            true
-        );
 
         $emailsSent = 0;
 
-        foreach ($abandonedCarts as $cartData) {
-            \PrestaShopLogger::addLog(
-                'Processing cart ID: ' . $cartData['id_cart'] . ' for customer: ' . $cartData['email'],
-                1,
-                null,
-                'Pe_AbandonedCart',
-                null,
-                true
-            );
 
-            $cart = new \Cart($cartData['id_cart']);
-            $customer = new \Customer($cartData['id_customer']);
+        /**
+         * @var CheckoutData $cartData
+         */
+        foreach ($abandonedCarts as $cartData) {
+
+            if ($cartData->getCheckoutPaymentStep()['step_is_complete'] === true) {
+                continue;
+            }
+
+            $cart = new \Cart($cartData->getIdCart());
+            $customer = new \Customer($cartData->getIdCustomer());
             
             if ($this->sendRecoveryEmailForCart($cart, $customer)) {
                 // Registra l'invio dell'email nella tabella abandoned_cart
@@ -84,15 +54,6 @@ class AbandonedCartService
             }
         }
 
-        \PrestaShopLogger::addLog(
-            'Abandoned cart processing completed. Emails sent: ' . $emailsSent,
-            1,
-            null,
-            'Pe_AbandonedCart',
-            null,
-            true
-        );
-
         return $emailsSent;
     }
 
@@ -100,45 +61,35 @@ class AbandonedCartService
      * Get abandoned carts that need email notification
      *
      * @param int $delay Delay in minutes
-     * @return array
+     * @return array <CheckoutData>
      */
     private function getAbandonedCartsToNotify($delay = 60)
     {
-        $sql = 'SELECT cart.id_cart, customer.*
+        $sql = 'SELECT cart.id_cart, customer.*,cart.checkout_session_data
                 FROM `' . _DB_PREFIX_ . 'cart` as cart
                 LEFT JOIN `' . _DB_PREFIX_ . 'customer` as customer ON customer.id_customer = cart.id_customer
                 LEFT JOIN `' . _DB_PREFIX_ . 'abandoned_cart` as ac ON ac.id_cart = cart.id_cart
                 WHERE TIMESTAMPDIFF(MINUTE, cart.date_upd, NOW()) >= ' . (int)$delay . '
                 AND cart.id_customer != 0
-                AND cart.checkout_session_data IS NULL
                 AND (ac.email_sent = 0 OR ac.email_sent IS NULL)
                 AND (ac.recovered = 0 OR ac.recovered IS NULL)
                 ORDER BY cart.date_add ASC';
 
-        \PrestaShopLogger::addLog(
-            'Executing query: ' . $sql,
-            1,
-            null,
-            'Pe_AbandonedCart',
-            null,
-            true
-        );
-
         $result = \Db::getInstance()->executeS($sql);
         
         if ($result === false) {
-            \PrestaShopLogger::addLog(
-                'Database error in getAbandonedCartsToNotify: ' . \Db::getInstance()->getMsgError(),
-                3,
-                null,
-                'Pe_AbandonedCart',
-                null,
-                true
-            );
             return [];
         }
 
-        return $result;
+        $checkoutDataList = [];
+        foreach ($result as $row) {
+            if(!isset($row['checkout_session_data']) || empty($row['checkout_session_data'])) {
+                continue;
+            }
+            $checkoutDataList[] = CheckoutData::createFromJson($row['checkout_session_data'], (int)$row['id_cart'], (int)$row['id_customer']);
+        }
+
+        return $checkoutDataList;
     }
 
     /**
@@ -197,14 +148,15 @@ class AbandonedCartService
             $abandonedCart->generateRecoveryToken();
         }
 
-        // Generate recovery URL
-        $recoveryUrl = $context->link->getModuleLink(
-            'pe_abandonedcart',
-            'recovery',
-            ['token' => $abandonedCart->recovery_token],
-            true,
-            $language->id
-        );
+        $recoveryUrl = $context->link->getPageLink(
+                'cart',
+                true,
+                (int) $cart->getAssociatedLanguage()->getId(),
+                [
+                    'recover_cart' => $cart->id,
+                    'token_cart' => md5(_COOKIE_KEY_ . 'recover_cart_' . (int) $cart->id),
+                ]
+            );
 
         // Get cart products
         $products = $cart->getProducts();
