@@ -14,6 +14,12 @@ use MLAB\PE\Model\CheckoutData;
 
 class AbandonedCartService
 {
+    /**
+     * PrestaShop default order states for failed/canceled orders
+     * These are typical values but may vary by installation
+     * PS_OS_CANCELED = 6, PS_OS_REFUND = 7, PS_OS_ERROR = 8
+     */
+    const FAILED_ORDER_STATES = [6, 7, 8];
 
     /**
      * Process abandoned carts and send emails
@@ -65,9 +71,11 @@ class AbandonedCartService
      */
     private function getAbandonedCartsToNotify($delay = 60)
     {
+        $failedStates = implode(',', array_map('intval', self::FAILED_ORDER_STATES));
+        
         // Only send emails to carts that:
         // 1. Have no orders at all, OR
-        // 2. Have ONLY orders in canceled/refunded/error states (6, 7, 8)
+        // 2. Have ONLY orders in canceled/refunded/error states
         // This allows recovery emails for failed transactions while preventing them for successful orders
         $sql = 'SELECT cart.id_cart, customer.*,cart.checkout_session_data
                 FROM `' . _DB_PREFIX_ . 'cart` as cart
@@ -80,7 +88,7 @@ class AbandonedCartService
                 AND NOT EXISTS (
                     SELECT 1 FROM `' . _DB_PREFIX_ . 'orders` 
                     WHERE id_cart = cart.id_cart 
-                    AND current_state NOT IN (6, 7, 8)
+                    AND current_state NOT IN (' . $failedStates . ')
                 )
                 ORDER BY cart.date_add ASC';
 
@@ -147,12 +155,13 @@ class AbandonedCartService
             return false;
         }
 
-        // Check if cart has a confirmed order (excluding canceled/refunded/error states)
+        // Check if cart has a confirmed order (excluding failed order states)
         // Only block emails if there's an order in a valid/successful state
-        // States 6 = Canceled, 7 = Refunded, 8 = Payment error are considered failed orders
+        // Note: PrestaShop order state IDs may vary by installation; adjust FAILED_ORDER_STATES if needed
+        $failedStates = implode(',', array_map('intval', self::FAILED_ORDER_STATES));
         $sql = 'SELECT id_order FROM `' . _DB_PREFIX_ . 'orders` 
                 WHERE id_cart = ' . (int)$cart->id . ' 
-                AND current_state NOT IN (6, 7, 8)';
+                AND current_state NOT IN (' . $failedStates . ')';
         $orderId = \Db::getInstance()->getValue($sql);
         if ($orderId) {
             return false;
