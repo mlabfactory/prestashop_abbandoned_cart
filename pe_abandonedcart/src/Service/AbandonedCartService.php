@@ -14,6 +14,13 @@ use MLAB\PE\Model\CheckoutData;
 
 class AbandonedCartService
 {
+    /**
+     * PrestaShop default order states for failed/canceled orders
+     * These are typical values but may vary by installation
+     * Note: Ideally use PS_OS_CANCELED, PS_OS_REFUND, PS_OS_ERROR constants from configuration
+     * PS_OS_CANCELED = 6, PS_OS_REFUND = 7, PS_OS_ERROR = 8
+     */
+    const FAILED_ORDER_STATES = [6, 7, 8];
 
     /**
      * Process abandoned carts and send emails
@@ -58,6 +65,16 @@ class AbandonedCartService
     }
 
     /**
+     * Get SQL-safe comma-separated list of failed order state IDs
+     *
+     * @return string Sanitized comma-separated state IDs
+     */
+    private function getFailedStatesForQuery()
+    {
+        return implode(',', array_map('intval', self::FAILED_ORDER_STATES));
+    }
+
+    /**
      * Get abandoned carts that need email notification
      *
      * @param int $delay Delay in minutes
@@ -65,6 +82,12 @@ class AbandonedCartService
      */
     private function getAbandonedCartsToNotify($delay = 60)
     {
+        $failedStates = $this->getFailedStatesForQuery();
+        
+        // Only send emails to carts that:
+        // 1. Have no orders at all, OR
+        // 2. Have ONLY orders in canceled/refunded/error states
+        // This allows recovery emails for failed transactions while preventing them for successful orders
         $sql = 'SELECT cart.id_cart, customer.*,cart.checkout_session_data
                 FROM `' . _DB_PREFIX_ . 'cart` as cart
                 LEFT JOIN `' . _DB_PREFIX_ . 'customer` as customer ON customer.id_customer = cart.id_customer
@@ -73,6 +96,11 @@ class AbandonedCartService
                 AND cart.id_customer != 0
                 AND (ac.email_sent = 0 OR ac.email_sent IS NULL)
                 AND (ac.recovered = 0 OR ac.recovered IS NULL)
+                AND NOT EXISTS (
+                    SELECT 1 FROM `' . _DB_PREFIX_ . 'orders` 
+                    WHERE id_cart = cart.id_cart 
+                    AND current_state NOT IN (' . $failedStates . ')
+                )
                 ORDER BY cart.date_add ASC';
 
         $result = \Db::getInstance()->executeS($sql);
@@ -135,6 +163,18 @@ class AbandonedCartService
     private function sendRecoveryEmailForCart($cart, $customer)
     {
         if (!$customer->id || !$cart->id || !$cart->nbProducts()) {
+            return false;
+        }
+
+        // Check if cart has a confirmed order (excluding failed order states)
+        // Only block emails if there's an order in a valid/successful state
+        // Note: PrestaShop order state IDs may vary by installation; adjust FAILED_ORDER_STATES if needed
+        $failedStates = $this->getFailedStatesForQuery();
+        $sql = 'SELECT id_order FROM `' . _DB_PREFIX_ . 'orders` 
+                WHERE id_cart = ' . (int)$cart->id . ' 
+                AND current_state NOT IN (' . $failedStates . ')';
+        $orderId = \Db::getInstance()->getValue($sql);
+        if ($orderId) {
             return false;
         }
 
