@@ -66,13 +66,13 @@ class AbandonedCartService
     private function getAbandonedCartsToNotify($delay = 60)
     {
         // PrestaShop order states that indicate a valid/confirmed order
-        // Exclude: PS_OS_CANCELED, PS_OS_ERROR (typically IDs 6 and 8)
+        // Exclude: PS_OS_CANCELED (6), PS_OS_REFUND (7), PS_OS_ERROR (8)
         // Include only carts that either have no order OR have canceled/error orders
         $sql = 'SELECT cart.id_cart, customer.*,cart.checkout_session_data
                 FROM `' . _DB_PREFIX_ . 'cart` as cart
                 LEFT JOIN `' . _DB_PREFIX_ . 'customer` as customer ON customer.id_customer = cart.id_customer
                 LEFT JOIN `' . _DB_PREFIX_ . 'abandoned_cart` as ac ON ac.id_cart = cart.id_cart
-                LEFT JOIN `' . _DB_PREFIX_ . 'orders` as orders ON orders.id_cart = cart.id_cart 
+                LEFT JOIN `' . _DB_PREFIX_ . 'orders` as orders ON orders.id_cart = cart.id_cart
                     AND orders.current_state NOT IN (6, 7, 8)
                 WHERE TIMESTAMPDIFF(MINUTE, cart.date_upd, NOW()) >= ' . (int)$delay . '
                 AND cart.id_customer != 0
