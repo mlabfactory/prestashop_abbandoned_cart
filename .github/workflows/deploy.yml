@@ -28,9 +28,6 @@ jobs:
     - name: Install Composer dependencies
       run: cd pe_abandonedcart && composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Copy .env example
-      run: cp .env.example .env
-
   deploy_job:
     runs-on: ubuntu-latest
     environment: prod
