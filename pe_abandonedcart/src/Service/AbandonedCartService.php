@@ -65,20 +65,23 @@ class AbandonedCartService
      */
     private function getAbandonedCartsToNotify($delay = 60)
     {
-        // PrestaShop order states that indicate a valid/confirmed order
-        // Exclude: PS_OS_CANCELED (6), PS_OS_REFUND (7), PS_OS_ERROR (8)
-        // Include only carts that either have no order OR have canceled/error orders
+        // Only send emails to carts that:
+        // 1. Have no orders at all, OR
+        // 2. Have ONLY orders in canceled/refunded/error states (6, 7, 8)
+        // This allows recovery emails for failed transactions while preventing them for successful orders
         $sql = 'SELECT cart.id_cart, customer.*,cart.checkout_session_data
                 FROM `' . _DB_PREFIX_ . 'cart` as cart
                 LEFT JOIN `' . _DB_PREFIX_ . 'customer` as customer ON customer.id_customer = cart.id_customer
                 LEFT JOIN `' . _DB_PREFIX_ . 'abandoned_cart` as ac ON ac.id_cart = cart.id_cart
-                LEFT JOIN `' . _DB_PREFIX_ . 'orders` as orders ON orders.id_cart = cart.id_cart
-                    AND orders.current_state NOT IN (6, 7, 8)
                 WHERE TIMESTAMPDIFF(MINUTE, cart.date_upd, NOW()) >= ' . (int)$delay . '
                 AND cart.id_customer != 0
                 AND (ac.email_sent = 0 OR ac.email_sent IS NULL)
                 AND (ac.recovered = 0 OR ac.recovered IS NULL)
-                AND orders.id_order IS NULL
+                AND NOT EXISTS (
+                    SELECT 1 FROM `' . _DB_PREFIX_ . 'orders` 
+                    WHERE id_cart = cart.id_cart 
+                    AND current_state NOT IN (6, 7, 8)
+                )
                 ORDER BY cart.date_add ASC';
 
         $result = \Db::getInstance()->executeS($sql);
@@ -144,8 +147,9 @@ class AbandonedCartService
             return false;
         }
 
-        // Check if cart has been converted to a valid order (exclude canceled/error states)
-        // PrestaShop states: 6 = Canceled, 7 = Refunded, 8 = Payment error
+        // Check if cart has a confirmed order (excluding canceled/refunded/error states)
+        // Only block emails if there's an order in a valid/successful state
+        // States 6 = Canceled, 7 = Refunded, 8 = Payment error are considered failed orders
         $sql = 'SELECT id_order FROM `' . _DB_PREFIX_ . 'orders` 
                 WHERE id_cart = ' . (int)$cart->id . ' 
                 AND current_state NOT IN (6, 7, 8)';
