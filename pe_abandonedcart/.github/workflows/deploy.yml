@@ -1,0 +1,53 @@
+name: Deploy application
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, pgsql, pdo, pdo_pgsql
+        ini-values: post_max_size=256M, upload_max_filesize=256M
+        coverage: none
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Copy .env example
+      run: cp .env.example .env
+
+  deploy_job:
+    runs-on: ubuntu-latest
+    environment: prod
+    name: deploy
+    needs: run-tests
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v2
+        - name: deploy file
+          uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+          with:
+              username: ${{ secrets.SFTP_USER }} 
+              server: ${{ secrets.SFTP_HOST }} 
+              ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }} 
+              password: ${{ secrets.SFTP_PASSWORD }} 
+              rsyncArgs: '--exclude=.git --exclude=*.log'
+              local_path: './pe_abandonedcart'
+              remote_path: "/root/dolcezampa/modules/pe_abandonedcart"
+              sftpArgs: '-o ConnectTimeout=5'
+  
