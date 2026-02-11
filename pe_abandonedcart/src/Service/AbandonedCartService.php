@@ -69,10 +69,12 @@ class AbandonedCartService
                 FROM `' . _DB_PREFIX_ . 'cart` as cart
                 LEFT JOIN `' . _DB_PREFIX_ . 'customer` as customer ON customer.id_customer = cart.id_customer
                 LEFT JOIN `' . _DB_PREFIX_ . 'abandoned_cart` as ac ON ac.id_cart = cart.id_cart
+                LEFT JOIN `' . _DB_PREFIX_ . 'orders` as orders ON orders.id_cart = cart.id_cart
                 WHERE TIMESTAMPDIFF(MINUTE, cart.date_upd, NOW()) >= ' . (int)$delay . '
                 AND cart.id_customer != 0
                 AND (ac.email_sent = 0 OR ac.email_sent IS NULL)
                 AND (ac.recovered = 0 OR ac.recovered IS NULL)
+                AND orders.id_order IS NULL
                 ORDER BY cart.date_add ASC';
 
         $result = \Db::getInstance()->executeS($sql);
