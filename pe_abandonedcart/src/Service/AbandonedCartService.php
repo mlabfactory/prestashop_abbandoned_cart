@@ -140,6 +140,13 @@ class AbandonedCartService
             return false;
         }
 
+        // Check if cart has been converted to an order
+        $sql = 'SELECT id_order FROM `' . _DB_PREFIX_ . 'orders` WHERE id_cart = ' . (int)$cart->id;
+        $orderId = \Db::getInstance()->getValue($sql);
+        if ($orderId) {
+            return false;
+        }
+
         $context = \Context::getContext();
         $language = new \Language($customer->id_lang);
 
