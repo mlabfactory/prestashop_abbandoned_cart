@@ -17,6 +17,7 @@ class AbandonedCartService
     /**
      * PrestaShop default order states for failed/canceled orders
      * These are typical values but may vary by installation
+     * Note: Ideally use PS_OS_CANCELED, PS_OS_REFUND, PS_OS_ERROR constants from configuration
      * PS_OS_CANCELED = 6, PS_OS_REFUND = 7, PS_OS_ERROR = 8
      */
     const FAILED_ORDER_STATES = [6, 7, 8];
@@ -64,6 +65,16 @@ class AbandonedCartService
     }
 
     /**
+     * Get SQL-safe comma-separated list of failed order state IDs
+     *
+     * @return string Sanitized comma-separated state IDs
+     */
+    private function getFailedStatesForQuery()
+    {
+        return implode(',', array_map('intval', self::FAILED_ORDER_STATES));
+    }
+
+    /**
      * Get abandoned carts that need email notification
      *
      * @param int $delay Delay in minutes
@@ -71,7 +82,7 @@ class AbandonedCartService
      */
     private function getAbandonedCartsToNotify($delay = 60)
     {
-        $failedStates = implode(',', array_map('intval', self::FAILED_ORDER_STATES));
+        $failedStates = $this->getFailedStatesForQuery();
         
         // Only send emails to carts that:
         // 1. Have no orders at all, OR
@@ -158,7 +169,7 @@ class AbandonedCartService
         // Check if cart has a confirmed order (excluding failed order states)
         // Only block emails if there's an order in a valid/successful state
         // Note: PrestaShop order state IDs may vary by installation; adjust FAILED_ORDER_STATES if needed
-        $failedStates = implode(',', array_map('intval', self::FAILED_ORDER_STATES));
+        $failedStates = $this->getFailedStatesForQuery();
         $sql = 'SELECT id_order FROM `' . _DB_PREFIX_ . 'orders` 
                 WHERE id_cart = ' . (int)$cart->id . ' 
                 AND current_state NOT IN (' . $failedStates . ')';
