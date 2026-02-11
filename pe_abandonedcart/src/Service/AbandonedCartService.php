@@ -65,11 +65,15 @@ class AbandonedCartService
      */
     private function getAbandonedCartsToNotify($delay = 60)
     {
+        // PrestaShop order states that indicate a valid/confirmed order
+        // Exclude: PS_OS_CANCELED, PS_OS_ERROR (typically IDs 6 and 8)
+        // Include only carts that either have no order OR have canceled/error orders
         $sql = 'SELECT cart.id_cart, customer.*,cart.checkout_session_data
                 FROM `' . _DB_PREFIX_ . 'cart` as cart
                 LEFT JOIN `' . _DB_PREFIX_ . 'customer` as customer ON customer.id_customer = cart.id_customer
                 LEFT JOIN `' . _DB_PREFIX_ . 'abandoned_cart` as ac ON ac.id_cart = cart.id_cart
-                LEFT JOIN `' . _DB_PREFIX_ . 'orders` as orders ON orders.id_cart = cart.id_cart
+                LEFT JOIN `' . _DB_PREFIX_ . 'orders` as orders ON orders.id_cart = cart.id_cart 
+                    AND orders.current_state NOT IN (6, 7, 8)
                 WHERE TIMESTAMPDIFF(MINUTE, cart.date_upd, NOW()) >= ' . (int)$delay . '
                 AND cart.id_customer != 0
                 AND (ac.email_sent = 0 OR ac.email_sent IS NULL)
@@ -140,8 +144,11 @@ class AbandonedCartService
             return false;
         }
 
-        // Check if cart has been converted to an order
-        $sql = 'SELECT id_order FROM `' . _DB_PREFIX_ . 'orders` WHERE id_cart = ' . (int)$cart->id;
+        // Check if cart has been converted to a valid order (exclude canceled/error states)
+        // PrestaShop states: 6 = Canceled, 7 = Refunded, 8 = Payment error
+        $sql = 'SELECT id_order FROM `' . _DB_PREFIX_ . 'orders` 
+                WHERE id_cart = ' . (int)$cart->id . ' 
+                AND current_state NOT IN (6, 7, 8)';
         $orderId = \Db::getInstance()->getValue($sql);
         if ($orderId) {
             return false;
